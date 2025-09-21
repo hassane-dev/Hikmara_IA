@@ -89,3 +89,25 @@ class RawLearner:
         except Exception as e:
             print(f"  -> ERREUR: Une erreur inattendue est survenue: {e}")
             return False
+
+    def learn_from_directory(self, directory_path: str) -> bool:
+        """
+        Parcourt un dossier récursivement et apprend de chaque fichier trouvé.
+        """
+        print(f"Module 3: Démarrage du scan du dossier '{directory_path}'...")
+        if not os.path.isdir(directory_path):
+            print(f"  -> ERREUR: Le chemin '{directory_path}' n'est pas un dossier valide.")
+            return False
+
+        overall_success = True
+        file_count = 0
+        for root, _, files in os.walk(directory_path):
+            for filename in files:
+                file_path = os.path.join(root, filename)
+                print(f"\n  -> Fichier trouvé: {file_path}")
+                if not self.learn_from_file(file_path):
+                    overall_success = False
+                file_count += 1
+
+        print(f"\nScan terminé. {file_count} fichiers traités.")
+        return overall_success
