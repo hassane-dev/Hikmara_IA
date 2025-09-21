@@ -57,8 +57,7 @@ class RawLearner:
 
     def _learn_from_python_file(self, filepath: str) -> bool:
         """
-        Analyse un fichier de code Python et apprend ses fonctions et classes
-        en extrayant leur docstring.
+        Analyse un fichier de code Python et apprend ses fonctions, classes (avec héritage), et imports.
         """
         print(f"Module 3 (Python): Analyse du fichier '{filepath}'...")
         try:
@@ -69,14 +68,42 @@ class RawLearner:
             all_successful = True
 
             for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                    node_type = "Fonction" if isinstance(node, ast.FunctionDef) else "Classe"
-                    concept_name = f"py_{node_type.lower()}:{node.name}"
-                    # Utilise le docstring comme contenu, ou une description par défaut
-                    content = ast.get_docstring(node) or f"{node_type} '{node.name}' sans docstring."
+                if isinstance(node, ast.ClassDef):
+                    concept_name = f"py_class:{node.name}"
+                    content = ast.get_docstring(node) or f"Classe '{node.name}' sans docstring."
+
+                    parent_classes = [base.id for base in node.bases if isinstance(base, ast.Name)]
+                    if parent_classes:
+                        content += f"\nHérite de : {parent_classes}."
 
                     if not self.structured_learner.learn_concept(concept_name, content, filepath):
                         all_successful = False
+
+                elif isinstance(node, ast.FunctionDef):
+                    concept_name = f"py_function:{node.name}"
+                    content = ast.get_docstring(node) or f"Fonction '{node.name}' sans docstring."
+
+                    args = [a.arg for a in node.args.args]
+                    if args:
+                        content += f"\nArguments : {args}."
+
+                    if not self.structured_learner.learn_concept(concept_name, content, filepath):
+                        all_successful = False
+
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        concept_name = f"py_import:{alias.name}"
+                        content = f"Module '{alias.name}' importé dans {os.path.basename(filepath)}."
+                        if not self.structured_learner.learn_concept(concept_name, content, filepath):
+                            all_successful = False
+
+                elif isinstance(node, ast.ImportFrom):
+                    module = node.module or 'local'
+                    for alias in node.names:
+                        concept_name = f"py_import_from:{module}.{alias.name}"
+                        content = f"'{alias.name}' importé depuis le module '{module}' dans {os.path.basename(filepath)}."
+                        if not self.structured_learner.learn_concept(concept_name, content, filepath):
+                            all_successful = False
 
             return all_successful
 
