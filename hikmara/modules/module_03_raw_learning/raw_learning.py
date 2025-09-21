@@ -2,6 +2,7 @@
 import os
 import nltk
 import ast
+import re
 from hikmara.modules.module_02_structured_learning.structured_learning import StructuredLearner
 
 class RawLearner:
@@ -24,6 +25,9 @@ class RawLearner:
         if filepath.endswith('.py'):
             print("  -> Fichier Python détecté. Lancement de l'analyseur de code.")
             return self._learn_from_python_file(filepath)
+        elif filepath.endswith('.php'):
+            print("  -> Fichier PHP détecté. Lancement de l'analyseur PHP.")
+            return self._learn_from_php_file(filepath)
         else: # Par défaut, traiter comme un fichier texte
             print("  -> Fichier texte par défaut détecté. Lancement de l'analyseur de texte.")
             return self._learn_from_text_file(filepath)
@@ -138,3 +142,36 @@ class RawLearner:
 
         print(f"\nScan terminé. {file_count} fichiers traités.")
         return overall_success
+
+    def _learn_from_php_file(self, filepath: str) -> bool:
+        """
+        Analyse un fichier .php, extrait les blocs de code PHP et les apprend.
+        """
+        print(f"Module 3 (PHP): Analyse du fichier '{filepath}'...")
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Expression régulière pour trouver tout le contenu entre les balises php
+            php_blocks = re.findall(r'<\?php(.*?)\?>', content, re.DOTALL)
+            print(f"  -> {len(php_blocks)} bloc(s) de code PHP trouvé(s).")
+
+            if not php_blocks:
+                return True # Pas une erreur s'il n'y a pas de code PHP
+
+            base_filename = os.path.basename(filepath)
+            all_successful = True
+            for i, block in enumerate(php_blocks):
+                concept_name = f"php_block_{i+1}_from_{base_filename}"
+                # On passe le code PHP brut au Module 2
+                if not self.structured_learner.learn_concept(concept_name, block.strip(), filepath):
+                    all_successful = False
+
+            return all_successful
+
+        except FileNotFoundError:
+            print(f"  -> ERREUR: Fichier non trouvé à '{filepath}'.")
+            return False
+        except Exception as e:
+            print(f"  -> ERREUR: Une erreur inattendue est survenue: {e}")
+            return False
