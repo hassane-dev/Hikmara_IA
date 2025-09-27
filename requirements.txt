@@ -1,21 +1,6 @@
 # Fichier de dépendances pour le projet Hikmara
 
-# --- Core & Apprentissage ---
+# --- Apprentissage & NLP ---
+# Dépendances actives utilisées par les modules 02, 03 et 04.
 nltk
-tensorflow
-torch
-torchvision # Souvent nécessaire avec PyTorch
-
-# --- Interface Graphique ---
-PyQt6
-
-# --- NLP ---
 spacy
-
-# --- Vision & Sécurité ---
-opencv-python
-face_recognition
-
-# --- Audio ---
-SpeechRecognition
-pyttsx3
