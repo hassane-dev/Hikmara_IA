@@ -19,31 +19,25 @@ class NLPProcessor:
     def _load_model(self):
         """
         Charge le modèle spaCy. S'il n'est pas disponible,
-        tente de le télécharger.
+        tente de le télécharger. Retourne None en cas d'échec.
         """
         try:
-            # Essayer de charger le modèle
-            nlp = spacy.load(self.model_name)
-            print(f"Modèle spaCy '{self.model_name}' chargé avec succès.")
-            return nlp
+            return spacy.load(self.model_name)
         except OSError:
-            print(f"Modèle spaCy '{self.model_name}' non trouvé.")
-            print("Tentative de téléchargement...")
             try:
+                # Redirige la sortie du téléchargement pour ne pas polluer la console
+                print(f"Téléchargement du modèle spaCy '{self.model_name}'...")
                 spacy.cli.download(self.model_name)
-                nlp = spacy.load(self.model_name)
-                print(f"Modèle '{self.model_name}' téléchargé et chargé avec succès.")
-                return nlp
-            except Exception as e:
-                print(f"ERREUR: Impossible de télécharger le modèle spaCy '{self.model_name}'.")
-                print(f"Veuillez l'installer manuellement avec la commande : python -m spacy download {self.model_name}")
-                print(f"Erreur originale: {e}")
+                print("Téléchargement terminé.")
+                return spacy.load(self.model_name)
+            except Exception:
+                # L'échec sera géré par la logique appelante.
                 return None
 
     def process_command(self, command_text: str) -> dict:
         """
         Analyse une commande textuelle et retourne une structure de données
-        contenant les informations extraites.
+        contenant les informations extraites. Ne fait pas d'affichage.
         """
         if not self.nlp:
             return {
@@ -66,12 +60,6 @@ class NLPProcessor:
 
         # Extraction d'entités nommées
         entities = {ent.label_: ent.text for ent in doc.ents}
-
-        print(f"--- Analyse NLP ---")
-        print(f"Commande: '{command_text}'")
-        print(f"  -> Intention détectée: {intent}")
-        print(f"  -> Entités reconnues: {entities}")
-        print(f"--------------------")
 
         return {
             "original_text": command_text,

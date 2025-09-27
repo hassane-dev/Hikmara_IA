@@ -22,22 +22,17 @@ class StructuredLearner:
         try:
             nltk.data.find('tokenizers/punkt')
         except LookupError:
-            print("Ressource NLTK 'punkt' non trouvée. Téléchargement en cours...")
+            # Le téléchargement se fait en silence.
+            # Un système de logging serait idéal ici à l'avenir.
             nltk.download('punkt', quiet=True)
-            print("Téléchargement de 'punkt' terminé.")
 
     def learn_concept(self, concept_name: str, content: str, source: str = None) -> bool:
         """
         Analyse (tokenise) et apprend un nouveau concept, puis le stocke.
+        Retourne True en cas de succès, False sinon.
         """
-        print(f"Module 2: Analyse du concept '{concept_name}'...")
-        tokens = nltk.word_tokenize(content)
-        print(f"  -> Tokens NLTK: {tokens}")
+        # La tokenisation est une étape interne, pas besoin de l'afficher.
+        nltk.word_tokenize(content)
 
         new_id = self.kb.add_knowledge(concept_name, content, source)
-        if new_id is not None:
-            print(f"  -> Concept '{concept_name}' stocké avec succès.")
-            return True
-        else:
-            print(f"  -> Échec du stockage du concept '{concept_name}'.")
-            return False
+        return new_id is not None
