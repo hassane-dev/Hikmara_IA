@@ -26,8 +26,10 @@ class KnowledgeBase:
             )
             """)
             self.conn.commit()
-        except sqlite3.Error as e:
-            print(f"Erreur SQLite lors de l'initialisation de la DB: {e}")
+        except sqlite3.Error:
+            # En cas d'erreur à l'initialisation, il est préférable de ne pas continuer.
+            # Un système de logging serait utile ici.
+            self.conn = None
 
     def add_knowledge(self, concept_name: str, content: str, source: str = None) -> int:
         if not self.conn: return None
@@ -37,10 +39,8 @@ class KnowledgeBase:
             cursor.execute(sql, (concept_name, content, source))
             self.conn.commit()
             return cursor.lastrowid
-        except sqlite3.IntegrityError:
-            return None
-        except sqlite3.Error as e:
-            print(f"Erreur SQLite lors de l'ajout de connaissance: {e}")
+        except (sqlite3.IntegrityError, sqlite3.Error):
+            # En cas d'erreur (doublon ou autre), on retourne None.
             return None
 
     def get_knowledge(self, concept_name: str) -> dict:
@@ -52,8 +52,7 @@ class KnowledgeBase:
             cursor.execute(sql, (concept_name,))
             row = cursor.fetchone()
             return dict(row) if row else None
-        except sqlite3.Error as e:
-            print(f"Erreur SQLite lors de la récupération de connaissance: {e}")
+        except sqlite3.Error:
             return None
 
     def update_knowledge(self, concept_name: str, new_content: str) -> bool:
@@ -64,8 +63,7 @@ class KnowledgeBase:
             cursor.execute(sql, (new_content, concept_name))
             self.conn.commit()
             return cursor.rowcount > 0
-        except sqlite3.Error as e:
-            print(f"Erreur SQLite lors de la mise à jour de connaissance: {e}")
+        except sqlite3.Error:
             return False
 
     def delete_knowledge(self, concept_name: str) -> bool:
@@ -76,8 +74,7 @@ class KnowledgeBase:
             cursor.execute(sql, (concept_name,))
             self.conn.commit()
             return cursor.rowcount > 0
-        except sqlite3.Error as e:
-            print(f"Erreur SQLite lors de la suppression de connaissance: {e}")
+        except sqlite3.Error:
             return False
 
     def close(self):

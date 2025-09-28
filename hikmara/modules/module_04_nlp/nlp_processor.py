@@ -37,33 +37,59 @@ class NLPProcessor:
     def process_command(self, command_text: str) -> dict:
         """
         Analyse une commande textuelle et retourne une structure de données
-        contenant les informations extraites. Ne fait pas d'affichage.
+        contenant les intentions, types de projet et noms.
         """
         if not self.nlp:
-            return {
-                "error": "Le modèle NLP n'est pas chargé.",
-                "intent": None,
-                "entities": {}
-            }
+            return {"error": "Le modèle NLP n'est pas chargé."}
 
-        doc = self.nlp(command_text)
+        doc = self.nlp(command_text.lower()) # Travailler en minuscules pour la simplicité
 
-        # Logique d'extraction d'intention (simpliste pour commencer)
-        # Exemple: si le verbe est "créer" ou "ouvrir", on en déduit l'intention.
-        intent = None
-        for token in doc:
-            if token.pos_ == "VERB":
-                intent = token.lemma_ # Utiliser le lemme pour la forme de base
-                break
-        if intent is None:
-            intent = "unknown"
-
-        # Extraction d'entités nommées
-        entities = {ent.label_: ent.text for ent in doc.ents}
-
-        return {
-            "original_text": command_text,
-            "intent": intent,
-            "entities": entities,
-            "tokens": [token.text for token in doc]
+        # --- Définition des mots-clés ---
+        INTENT_KEYWORDS = {
+            "create": ["crée", "créer", "fabrique", "génère"],
+            "execute": ["exécute", "exécuter", "lance", "lancer", "démarre"]
         }
+        PROJECT_TYPE_KEYWORDS = {
+            "python": ["python", "py"],
+            "web": ["web", "html", "site"]
+        }
+
+        # --- Initialisation des résultats ---
+        result = {
+            "original_text": command_text,
+            "intent": "unknown",
+            "project_type": "unknown",
+            "project_name": None,
+            "entities": {ent.label_: ent.text for ent in self.nlp(command_text).ents}
+        }
+
+        # --- Extraction par mots-clés ---
+        tokens = [token.text for token in doc]
+
+        # 1. Trouver l'intention
+        for intent, keywords in INTENT_KEYWORDS.items():
+            if any(keyword in tokens for keyword in keywords):
+                result["intent"] = intent
+                break
+
+        # 2. Trouver le type de projet
+        for project_type, keywords in PROJECT_TYPE_KEYWORDS.items():
+            if any(keyword in tokens for keyword in keywords):
+                result["project_type"] = project_type
+                break
+
+        # 3. Extraire le nom du projet (heuristique simple)
+        # On cherche un nom propre (PROPN) ou un nom (NOUN) qui n'est pas un mot-clé.
+        for token in doc:
+            if token.pos_ in ["PROPN", "NOUN"] and token.text not in (
+                PROJECT_TYPE_KEYWORDS["python"] + PROJECT_TYPE_KEYWORDS["web"] + ["projet", "script"]
+            ):
+                 # On prend le nom original (avec majuscules) pour le nom du projet
+                result["project_name"] = self.nlp(command_text)[token.i].text
+                break
+
+        # Si le nom n'est pas trouvé, on peut essayer avec les entités génériques
+        if not result["project_name"] and result["entities"]:
+            result["project_name"] = next(iter(result["entities"].values()), None)
+
+        return result
