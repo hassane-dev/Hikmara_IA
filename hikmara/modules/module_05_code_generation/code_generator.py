@@ -58,3 +58,40 @@ class CodeGenerator:
         except OSError as e:
             error_message = f"Erreur lors de la création du projet '{project_name}': {e}"
             return False, error_message
+
+    def create_python_project(self, project_name: str) -> tuple[bool, str]:
+        """
+        Crée une structure de base pour un projet Python simple.
+        - Crée un dossier pour le projet.
+        - Crée un fichier main.py de base.
+        :param project_name: Le nom du projet à créer.
+        :return: Un tuple (succès, message).
+        """
+        project_path = os.path.join(self.base_path, project_name)
+
+        if os.path.exists(project_path):
+            return False, f"Le projet '{project_name}' existe déjà."
+
+        try:
+            # 1. Créer le dossier du projet
+            os.makedirs(project_path)
+
+            # 2. Créer le fichier main.py de base
+            main_py_content = f"""# Projet '{project_name}' généré par Hikmara
+
+def main():
+    print("Hello, World! from project '{project_name}'")
+
+if __name__ == "__main__":
+    main()
+"""
+
+            with open(os.path.join(project_path, "main.py"), "w", encoding="utf-8") as f:
+                f.write(main_py_content)
+
+            success_message = f"Le projet Python '{project_name}' a été créé avec succès dans '{project_path}'."
+            return True, success_message
+
+        except OSError as e:
+            error_message = f"Erreur lors de la création du projet Python '{project_name}': {e}"
+            return False, error_message

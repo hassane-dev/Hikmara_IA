@@ -49,8 +49,26 @@ class TerminalView:
 
         print("--- Analyse de la commande ---")
         print(f"  > Intention: {nlp_result.get('intent', 'N/A')}")
-        print(f"  > Entités: {nlp_result.get('entities', 'N/A')}")
+        print(f"  > Type de projet: {nlp_result.get('project_type', 'N/A')}")
+        print(f"  > Nom du projet: {nlp_result.get('project_name', 'N/A')}")
         print("------------------------------")
+
+    def display_execution_result(self, success: bool, stdout: str, stderr: str):
+        """
+        Affiche le résultat de l'exécution d'un script de manière formatée.
+        """
+        if success:
+            self.display_message("-> Exécution terminée avec succès.")
+            if stdout:
+                print("--- Sortie du Script ---")
+                print(stdout)
+                print("------------------------")
+        else:
+            self.display_message("-> L'exécution a échoué.")
+            if stderr:
+                print("--- Erreur du Script ---")
+                print(stderr)
+                print("----------------------")
 
     def display_shutdown_message(self):
         """
