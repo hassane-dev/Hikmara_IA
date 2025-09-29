@@ -6,6 +6,8 @@ from hikmara.modules.module_03_raw_learning.raw_learning import RawLearner
 from hikmara.modules.module_04_nlp.nlp_processor import NLPProcessor
 from hikmara.modules.module_05_code_generation.code_generator import CodeGenerator
 from hikmara.modules.module_06_code_execution.code_executor import CodeExecutor
+from hikmara.modules.module_07_voice_recognition.voice_recognizer import VoiceRecognizer
+from hikmara.modules.module_08_voice_synthesis.voice_synthesizer import VoiceSynthesizer
 from hikmara.view.terminal_view import TerminalView
 
 class MainController:
@@ -17,39 +19,59 @@ class MainController:
         Initialise le contrôleur principal, la vue et les modules.
         """
         db_full_path = "hikmara/model/hikmara_kb.db"
+        self.voice_synthesizer = VoiceSynthesizer()
+        self.view = TerminalView(synthesizer=self.voice_synthesizer)
+        self.voice_mode_enabled = False
 
-        # Initialisation de la vue
-        self.view = TerminalView()
-
-        # Initialisation des modules dans l'ordre de dépendance
         self.view.display_message("Initialisation du contrôleur et des modules...")
         self.knowledge_base = KnowledgeBase(db_path=db_full_path)
         self.structured_learner = StructuredLearner(knowledge_base=self.knowledge_base)
         self.raw_learner = RawLearner(structured_learner=self.structured_learner)
         self.nlp_processor = NLPProcessor()
         self.code_generator = CodeGenerator()
-        self.code_executor = CodeExecutor() # Instanciation du Module 6
+        self.code_executor = CodeExecutor()
+        self.voice_recognizer = VoiceRecognizer()
+        # Le VoiceSynthesizer est déjà initialisé plus haut
         self.view.display_message("Modules initialisés.")
 
     def start(self):
         """
         Démarre la boucle principale de l'application en utilisant la vue.
+        Gère les modes d'entrée texte et vocal.
         """
         self.view.display_welcome()
 
         while True:
-            command = self.view.get_command()
+            command = ""
+            if self.voice_mode_enabled:
+                self.view.display_listening_prompt()
+                status, result = self.voice_recognizer.listen_for_command()
+                if status == 'success':
+                    self.view.display_message(f"Commande reconnue : '{result}'")
+                    command = result
+                else:
+                    self.view.display_message(f"-> {result}")
+                    continue
+            else:
+                command = self.view.get_command()
 
-            if command.lower().strip() in ["quitter", "exit", "stop"]:
+            # Commandes spéciales pour gérer l'état de l'application
+            clean_command = command.lower().strip()
+            if clean_command in ["quitter", "exit", "stop"]:
                 break
-
+            if clean_command == "mode vocal":
+                self.voice_mode_enabled = True
+                self.view.display_message("Mode vocal activé.")
+                continue
+            if clean_command == "mode texte":
+                self.voice_mode_enabled = False
+                self.view.display_message("Mode texte activé.")
+                continue
             if not command.strip():
                 continue
 
-            # Le contrôleur traite la commande via le module NLP
+            # Traitement de la commande
             nlp_result = self.nlp_processor.process_command(command)
-
-            # Le contrôleur interprète l'intention et agit en conséquence
             self._process_intent(nlp_result)
 
     def _process_intent(self, nlp_result: dict):
@@ -57,17 +79,25 @@ class MainController:
         Analyse l'intention et les entités pour déclencher les actions appropriées.
         """
         intent = nlp_result.get("intent")
-
         self.view.display_nlp_result(nlp_result)
 
         if intent == "create":
             self._handle_creation_intent(nlp_result)
         elif intent == "execute":
             self._handle_execution_intent(nlp_result)
+        elif intent == "speak":
+            self._handle_speak_intent()
         elif intent == "unknown":
-            self.view.display_message("-> Je n'ai pas compris l'action principale. Pouvez-vous reformuler ?")
+            message = "-> Je n'ai pas compris l'action principale. Pouvez-vous reformuler ?"
+            self.view.display_message(message, speak=self.voice_mode_enabled)
         else:
-            self.view.display_message(f"-> L'action '{intent}' n'est pas encore prise en charge.")
+            message = f"-> L'action '{intent}' n'est pas encore prise en charge."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
+
+    def _handle_speak_intent(self):
+        """ Gère l'intention de parler pour se présenter. """
+        message = "Bonjour, je suis Hikmara, votre assistante IA locale."
+        self.view.display_message(message, speak=True) # Toujours parler pour se présenter
 
     def _handle_creation_intent(self, nlp_result: dict):
         """
@@ -77,7 +107,8 @@ class MainController:
         project_name = nlp_result.get("project_name")
 
         if not project_name:
-            self.view.display_message("-> Vous voulez créer quelque chose, mais je n'ai pas compris le nom du projet.")
+            message = "-> Vous voulez créer quelque chose, mais je n'ai pas compris le nom du projet."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
             return
 
         if project_type == "python":
@@ -85,10 +116,11 @@ class MainController:
         elif project_type == "web":
             success, message = self.code_generator.create_web_project(project_name)
         else:
-            self.view.display_message(f"-> Je ne sais pas comment créer un projet de type '{project_type}'. Je vais créer un projet web par défaut.")
+            message = f"-> Je ne sais pas comment créer un projet de type '{project_type}'. Je vais créer un projet web par défaut."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
             success, message = self.code_generator.create_web_project(project_name)
 
-        self.view.display_message(f"-> {message}")
+        self.view.display_message(f"-> {message}", speak=self.voice_mode_enabled)
 
     def _handle_execution_intent(self, nlp_result: dict):
         """
@@ -96,7 +128,8 @@ class MainController:
         """
         project_name = nlp_result.get("project_name")
         if not project_name:
-            self.view.display_message("-> Vous voulez exécuter un projet, mais je n'ai pas compris lequel.")
+            message = "-> Vous voulez exécuter un projet, mais je n'ai pas compris lequel."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
             return
 
         # On suppose que le script principal s'appelle 'main.py'
@@ -104,14 +137,16 @@ class MainController:
         script_path = os.path.join(project_path, "main.py")
 
         if not os.path.exists(script_path):
-            self.view.display_message(f"-> Erreur: Impossible de trouver le script principal pour le projet '{project_name}'.")
+            message = f"-> Erreur: Impossible de trouver le script principal pour le projet '{project_name}'."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
             return
 
-        self.view.display_message(f"-> Lancement du script pour le projet '{project_name}'...")
+        message = f"-> Lancement du script pour le projet '{project_name}'..."
+        self.view.display_message(message, speak=self.voice_mode_enabled)
         success, stdout, stderr = self.code_executor.execute_python_script(script_path)
 
         # Le contrôleur demande à la vue d'afficher le résultat de l'exécution
-        self.view.display_execution_result(success, stdout, stderr)
+        self.view.display_execution_result(success, stdout, stderr, speak=self.voice_mode_enabled)
 
 
     def shutdown(self):

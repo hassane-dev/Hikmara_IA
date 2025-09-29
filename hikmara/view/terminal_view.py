@@ -5,11 +5,12 @@ class TerminalView:
     Gère l'interface utilisateur en mode terminal.
     Responsable de l'affichage des informations et de la saisie des commandes.
     """
-    def __init__(self):
+    def __init__(self, synthesizer=None):
         """
         Initialise la vue terminal.
+        :param synthesizer: Une instance du VoiceSynthesizer pour la sortie vocale.
         """
-        pass # Pas d'initialisation complexe nécessaire pour l'instant.
+        self.synthesizer = synthesizer
 
     def display_welcome(self):
         """
@@ -33,11 +34,17 @@ class TerminalView:
             print() # Ajoute une nouvelle ligne pour la propreté
             return "quitter"
 
-    def display_message(self, message: str):
+    def display_message(self, message: str, speak: bool = False):
         """
-        Affiche un message général à l'utilisateur.
+        Affiche un message général à l'utilisateur et le lit à voix haute si demandé.
         """
         print(message)
+        if speak and self.synthesizer:
+            self.synthesizer.speak(message)
+
+    def display_listening_prompt(self):
+        """ Affiche le message indiquant que l'IA écoute. """
+        print("🎤 Je vous écoute...")
 
     def display_nlp_result(self, nlp_result: dict):
         """
@@ -53,22 +60,23 @@ class TerminalView:
         print(f"  > Nom du projet: {nlp_result.get('project_name', 'N/A')}")
         print("------------------------------")
 
-    def display_execution_result(self, success: bool, stdout: str, stderr: str):
+    def display_execution_result(self, success: bool, stdout: str, stderr: str, speak: bool = False):
         """
         Affiche le résultat de l'exécution d'un script de manière formatée.
         """
         if success:
-            self.display_message("-> Exécution terminée avec succès.")
+            message = "Exécution terminée avec succès."
+            self.display_message(f"-> {message}", speak=speak)
             if stdout:
                 print("--- Sortie du Script ---")
                 print(stdout)
-                print("------------------------")
+                # On ne lit pas la sortie complète pour ne pas être trop verbeux
         else:
-            self.display_message("-> L'exécution a échoué.")
+            message = "L'exécution a échoué."
+            self.display_message(f"-> {message}", speak=speak)
             if stderr:
                 print("--- Erreur du Script ---")
                 print(stderr)
-                print("----------------------")
 
     def display_shutdown_message(self):
         """
