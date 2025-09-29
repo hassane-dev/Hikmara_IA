@@ -8,6 +8,7 @@ from hikmara.modules.module_05_code_generation.code_generator import CodeGenerat
 from hikmara.modules.module_06_code_execution.code_executor import CodeExecutor
 from hikmara.modules.module_07_voice_recognition.voice_recognizer import VoiceRecognizer
 from hikmara.modules.module_08_voice_synthesis.voice_synthesizer import VoiceSynthesizer
+from hikmara.modules.module_09_facial_recognition.facial_recognizer import FacialRecognizer
 from hikmara.view.terminal_view import TerminalView
 
 class MainController:
@@ -31,6 +32,7 @@ class MainController:
         self.code_generator = CodeGenerator()
         self.code_executor = CodeExecutor()
         self.voice_recognizer = VoiceRecognizer()
+        self.facial_recognizer = FacialRecognizer() # Instanciation du Module 9
         # Le VoiceSynthesizer est déjà initialisé plus haut
         self.view.display_message("Modules initialisés.")
 
@@ -87,6 +89,10 @@ class MainController:
             self._handle_execution_intent(nlp_result)
         elif intent == "speak":
             self._handle_speak_intent()
+        elif intent == "learn_face":
+            self._handle_learn_face_intent()
+        elif intent == "verify_face":
+            self._handle_verify_face_intent()
         elif intent == "unknown":
             message = "-> Je n'ai pas compris l'action principale. Pouvez-vous reformuler ?"
             self.view.display_message(message, speak=self.voice_mode_enabled)
@@ -98,6 +104,24 @@ class MainController:
         """ Gère l'intention de parler pour se présenter. """
         message = "Bonjour, je suis Hikmara, votre assistante IA locale."
         self.view.display_message(message, speak=True) # Toujours parler pour se présenter
+
+    def _handle_learn_face_intent(self):
+        """ Gère l'intention d'apprendre un visage. """
+        message = "Je vais tenter d'apprendre votre visage. Veuillez regarder la caméra et ne pas bouger."
+        self.view.display_message(message, speak=self.voice_mode_enabled)
+
+        success, message = self.facial_recognizer.learn_face()
+
+        self.view.display_message(f"-> {message}", speak=self.voice_mode_enabled)
+
+    def _handle_verify_face_intent(self):
+        """ Gère l'intention de vérifier un visage. """
+        message = "Je vais tenter de vous identifier. Veuillez regarder la caméra."
+        self.view.display_message(message, speak=self.voice_mode_enabled)
+
+        success, message = self.facial_recognizer.verify_face()
+
+        self.view.display_message(f"-> {message}", speak=self.voice_mode_enabled)
 
     def _handle_creation_intent(self, nlp_result: dict):
         """
