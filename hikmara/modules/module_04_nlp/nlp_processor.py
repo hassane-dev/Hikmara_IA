@@ -47,7 +47,8 @@ class NLPProcessor:
         # --- Définition des mots-clés ---
         INTENT_KEYWORDS = {
             "create": ["crée", "créer", "fabrique", "génère"],
-            "execute": ["exécute", "exécuter", "lance", "lancer", "démarre"]
+            "execute": ["exécute", "exécuter", "lance", "lancer", "démarre"],
+            "speak": ["parle", "parler", "dis", "dire", "présente-toi"]
         }
         PROJECT_TYPE_KEYWORDS = {
             "python": ["python", "py"],

@@ -4,3 +4,8 @@
 # Dépendances actives utilisées par les modules 02, 03 et 04.
 nltk
 spacy
+
+# --- Modules Vocaux ---
+# Dépendances pour les modules 07 et 08.
+SpeechRecognition
+pyttsx3
