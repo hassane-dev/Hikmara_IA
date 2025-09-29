@@ -48,7 +48,9 @@ class NLPProcessor:
         INTENT_KEYWORDS = {
             "create": ["crée", "créer", "fabrique", "génère"],
             "execute": ["exécute", "exécuter", "lance", "lancer", "démarre"],
-            "speak": ["parle", "parler", "dis", "dire", "présente-toi"]
+            "speak": ["parle", "parler", "dis", "dire", "présente-toi"],
+            "learn_face": ["apprends", "apprendre", "mémorise", "mémoriser", "enregistre mon visage"],
+            "verify_face": ["identifie", "identifier", "vérifie", "vérifier", "reconnais", "qui suis-je"]
         }
         PROJECT_TYPE_KEYWORDS = {
             "python": ["python", "py"],

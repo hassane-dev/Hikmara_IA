@@ -9,3 +9,8 @@ spacy
 # Dépendances pour les modules 07 et 08.
 SpeechRecognition
 pyttsx3
+
+# --- Vision & Sécurité ---
+# Dépendances pour le module 09.
+opencv-python
+face_recognition
