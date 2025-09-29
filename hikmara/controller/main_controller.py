@@ -1,5 +1,6 @@
 # hikmara/controller/main_controller.py
 import os
+import nltk
 from hikmara.modules.module_01_knowledge_base.knowledge_base import KnowledgeBase
 from hikmara.modules.module_02_structured_learning.structured_learning import StructuredLearner
 from hikmara.modules.module_03_raw_learning.raw_learning import RawLearner
@@ -10,6 +11,7 @@ from hikmara.modules.module_07_voice_recognition.voice_recognizer import VoiceRe
 from hikmara.modules.module_08_voice_synthesis.voice_synthesizer import VoiceSynthesizer
 from hikmara.modules.module_09_facial_recognition.facial_recognizer import FacialRecognizer
 from hikmara.modules.module_10_internet_control.internet_controller import InternetController
+from hikmara.modules.web_search.web_searcher import WebSearcher
 from hikmara.view.terminal_view import TerminalView
 
 class MainController:
@@ -34,15 +36,38 @@ class MainController:
         self.code_generator = CodeGenerator()
         self.code_executor = CodeExecutor()
         self.voice_recognizer = VoiceRecognizer()
-        self.facial_recognizer = FacialRecognizer() # Instanciation du Module 9
+        self.facial_recognizer = FacialRecognizer()
+        self.web_searcher = WebSearcher() # Instanciation du WebSearcher
         # Le VoiceSynthesizer est déjà initialisé plus haut
         self.view.display_message("Modules initialisés.")
+
+    def _ensure_dependencies(self):
+        """
+        S'assure que les dépendances de données (comme NLTK) sont prêtes.
+        """
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            self.view.display_message("Données NLTK ('punkt') manquantes. Tentative de téléchargement...")
+            # On utilise l'internet_controller pour demander la permission
+            prompt = "Les données NLTK 'punkt' sont nécessaires pour analyser le texte. Puis-je les télécharger ?"
+            if self.internet_controller.request_permission(prompt):
+                try:
+                    nltk.download('punkt', quiet=True)
+                    self.view.display_message("Téléchargement de 'punkt' réussi.")
+                except Exception as e:
+                    self.view.display_message(f"ERREUR: Impossible de télécharger les données NLTK. {e}")
+            else:
+                self.view.display_message("Téléchargement refusé. Certaines fonctionnalités d'apprentissage pourraient être limitées.")
 
     def start(self):
         """
         Démarre la boucle principale de l'application en utilisant la vue.
         Gère les modes d'entrée texte et vocal.
         """
+        # On s'assure que les dépendances sont prêtes avant de démarrer la boucle principale
+        self._ensure_dependencies()
+
         self.view.display_welcome()
 
         while True:
@@ -97,6 +122,8 @@ class MainController:
             self._handle_verify_face_intent()
         elif intent == "install":
             self._handle_install_intent(nlp_result)
+        elif intent == "search":
+            self._handle_search_intent(nlp_result)
         elif intent == "unknown":
             message = "-> Je n'ai pas compris l'action principale. Pouvez-vous reformuler ?"
             self.view.display_message(message, speak=self.voice_mode_enabled)
@@ -143,6 +170,56 @@ class MainController:
         else:
             message = "-> Installation annulée."
             self.view.display_message(message, speak=self.voice_mode_enabled)
+
+    def _handle_search_intent(self, nlp_result: dict):
+        """ Gère l'intention de recherche web et le cycle d'apprentissage. """
+        query = nlp_result.get("search_query")
+        if not query:
+            message = "-> Vous voulez rechercher quelque chose, mais votre requête est vide."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
+            return
+
+        message = f"Recherche en cours pour : '{query}'..."
+        self.view.display_message(message, speak=self.voice_mode_enabled)
+
+        search_success, results = self.web_searcher.perform_search(query)
+
+        if not search_success:
+            self.view.display_message(f"-> {results}", speak=self.voice_mode_enabled)
+            return
+
+        self.view.display_search_results(results)
+
+        # Proposer à l'utilisateur d'apprendre à partir d'un des résultats
+        prompt = "Voulez-vous que j'apprenne le contenu d'un de ces liens ? Si oui, entrez son numéro. Sinon, tapez 'n'."
+        self.view.display_message(prompt, speak=self.voice_mode_enabled)
+
+        choice = self.view.get_command()
+        if choice.lower().strip() in ['n', 'non']:
+            self.view.display_message("-> Apprentissage annulé.", speak=self.voice_mode_enabled)
+            return
+
+        try:
+            choice_index = int(choice) - 1
+            if 0 <= choice_index < len(results):
+                url_to_learn = results[choice_index]['url']
+                self.view.display_message(f"-> Lecture de la page : {url_to_learn}", speak=self.voice_mode_enabled)
+
+                fetch_success, content = self.internet_controller.fetch_website_content(url_to_learn)
+
+                if fetch_success:
+                    self.view.display_message("-> Contenu récupéré. Début de l'analyse et de l'apprentissage...", speak=self.voice_mode_enabled)
+                    learn_success = self.raw_learner.learn_from_text(content, source_name=url_to_learn)
+                    if learn_success:
+                        self.view.display_message("-> Apprentissage terminé avec succès.", speak=self.voice_mode_enabled)
+                    else:
+                        self.view.display_message("-> Une erreur est survenue durant l'apprentissage.", speak=self.voice_mode_enabled)
+                else:
+                    self.view.display_message(f"-> Erreur lors de la récupération de la page : {content}", speak=self.voice_mode_enabled)
+            else:
+                self.view.display_message("-> Choix invalide.", speak=self.voice_mode_enabled)
+        except ValueError:
+            self.view.display_message("-> Entrée non valide. Apprentissage annulé.", speak=self.voice_mode_enabled)
 
     def _handle_creation_intent(self, nlp_result: dict):
         """

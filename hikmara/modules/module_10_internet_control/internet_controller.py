@@ -1,6 +1,8 @@
 # hikmara/modules/module_10_internet_control/internet_controller.py
 import subprocess
 import sys
+import requests
+from bs4 import BeautifulSoup
 
 class InternetController:
     """
@@ -60,3 +62,35 @@ class InternetController:
             return False, "Erreur: Le temps d'installation a dépassé 5 minutes."
         except Exception as e:
             return False, f"Une erreur inattendue est survenue: {e}"
+
+    def fetch_website_content(self, url: str) -> tuple[bool, str]:
+        """
+        Récupère et nettoie le contenu textuel d'une page web.
+        :param url: L'URL de la page à lire.
+        :return: Un tuple (succès, contenu textuel ou message d'erreur).
+        """
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status() # Lève une exception pour les codes d'erreur HTTP
+
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Supprimer les balises de script et de style
+            for script_or_style in soup(['script', 'style']):
+                script_or_style.decompose()
+
+            # Extraire le texte et nettoyer les espaces
+            text = soup.get_text()
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            clean_text = '\n'.join(chunk for chunk in chunks if chunk)
+
+            return True, clean_text
+
+        except requests.exceptions.RequestException as e:
+            return False, f"Erreur réseau lors de l'accès à l'URL: {e}"
+        except Exception as e:
+            return False, f"Une erreur inattendue est survenue lors de la lecture de la page: {e}"

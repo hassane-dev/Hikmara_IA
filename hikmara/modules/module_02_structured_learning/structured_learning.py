@@ -13,18 +13,6 @@ class StructuredLearner:
         if knowledge_base is None:
             raise ValueError("L'instance de KnowledgeBase ne peut pas être None.")
         self.kb = knowledge_base
-        self._ensure_nltk_data()
-
-    def _ensure_nltk_data(self):
-        """
-        S'assure que les données NLTK nécessaires (punkt) sont téléchargées.
-        """
-        try:
-            nltk.data.find('tokenizers/punkt')
-        except LookupError:
-            # Le téléchargement se fait en silence.
-            # Un système de logging serait idéal ici à l'avenir.
-            nltk.download('punkt', quiet=True)
 
     def learn_concept(self, concept_name: str, content: str, source: str = None) -> bool:
         """

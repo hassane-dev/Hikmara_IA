@@ -55,6 +55,7 @@ class NLPProcessor:
             "create": ["crée", "créer", "fabrique", "génère"],
             "execute": ["exécute", "exécuter", "lance", "lancer", "démarre"],
             "install": ["installe", "installer", "télécharge"],
+            "search": ["recherche", "cherche", "trouve"],
             "speak": ["parle", "parler", "dis", "dire", "présente-toi"],
             "learn_face": ["apprends", "apprendre", "mémorise", "mémoriser", "enregistre mon visage"],
             "verify_face": ["identifie", "identifier", "vérifie", "vérifier", "reconnais", "qui suis-je"]
@@ -70,7 +71,8 @@ class NLPProcessor:
             "intent": "unknown",
             "project_type": "unknown",
             "project_name": None,
-            "package_name": None, # Ajout pour l'installation
+            "package_name": None,
+            "search_query": None, # Ajout pour la recherche
             "entities": {ent.label_: ent.text for ent in self.nlp(command_text).ents}
         }
 
@@ -108,13 +110,17 @@ class NLPProcessor:
             # Heuristique: le nom du paquet est souvent le nom qui suit le mot-clé d'installation.
             for i, token in enumerate(doc):
                 if token.text in INTENT_KEYWORDS["install"] and i + 1 < len(doc):
-                    # On peut affiner en cherchant le prochain nom, etc.
-                    # Pour l'instant, on prend le token suivant.
                     result["package_name"] = doc[i + 1].text
                     break
-            # Si non trouvé, on peut tenter de chercher un nom de projet comme fallback
             if not result["package_name"]:
                 result["package_name"] = result["project_name"]
 
+        # 5. Extraire la requête de recherche
+        if result["intent"] == "search":
+            for i, token in enumerate(doc):
+                if token.text in INTENT_KEYWORDS["search"]:
+                    # On prend tout le reste de la phrase comme requête
+                    result["search_query"] = command_text[token.idx + len(token.text):].strip()
+                    break
 
         return result
