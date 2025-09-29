@@ -31,21 +31,35 @@ class RawLearner:
     def _learn_from_text_file(self, filepath: str) -> bool:
         """
         Analyse un fichier texte en le segmentant en phrases.
+        Utilise la méthode générique learn_from_text.
         """
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
+            return self.learn_from_text(content, os.path.basename(filepath))
+        except (FileNotFoundError, Exception):
+            return False
 
-            base_filename = os.path.basename(filepath)
-            sentences = nltk.sent_tokenize(content)
+    def learn_from_text(self, text_content: str, source_name: str) -> bool:
+        """
+        Analyse un contenu textuel (depuis une chaîne) en le segmentant en phrases.
+        :param text_content: Le contenu textuel à apprendre.
+        :param source_name: Le nom de la source (ex: URL ou nom de fichier).
+        :return: True si l'apprentissage est réussi, False sinon.
+        """
+        try:
+            sentences = nltk.sent_tokenize(text_content)
+            if not sentences:
+                return True  # Pas une erreur s'il n'y a rien à apprendre
 
             all_successful = True
             for i, sentence in enumerate(sentences):
-                concept_name = f"{base_filename}_sentence_{i+1}"
-                if not self.structured_learner.learn_concept(concept_name, sentence.strip(), f"{base_filename} (phrase {i+1})"):
+                # On crée un nom de concept unique pour chaque phrase
+                concept_name = f"{source_name}_sentence_{i+1}"
+                if not self.structured_learner.learn_concept(concept_name, sentence.strip(), source_name):
                     all_successful = False
             return all_successful
-        except (FileNotFoundError, Exception):
+        except Exception:
             return False
 
     def _learn_from_python_file(self, filepath: str) -> bool:

@@ -78,6 +78,15 @@ class TerminalView:
                 print("--- Erreur du Script ---")
                 print(stderr)
 
+    def display_search_results(self, results: list):
+        """
+        Affiche les résultats d'une recherche web.
+        """
+        self.display_message("-> Voici les résultats trouvés :")
+        for i, result in enumerate(results):
+            # Pour l'instant, on n'a que l'URL.
+            print(f"  {i+1}. {result['url']}")
+
     def display_shutdown_message(self):
         """
         Affiche le message d'arrêt de l'application.

@@ -14,3 +14,8 @@ pyttsx3
 # Dépendances pour le module 09.
 opencv-python
 face_recognition
+
+# --- Web & Recherche ---
+# Dépendances pour la recherche en ligne et l'analyse de contenu.
+google-search
+beautifulsoup4
