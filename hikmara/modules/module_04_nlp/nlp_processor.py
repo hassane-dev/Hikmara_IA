@@ -8,30 +8,36 @@ class NLPProcessor:
     Utilise spaCy pour analyser les commandes de l'utilisateur,
     identifier les intentions et extraire les entités.
     """
-    def __init__(self, model_name="fr_core_news_sm"):
+    def __init__(self, internet_controller, model_name="fr_core_news_sm"):
         """
         Initialise le processeur NLP en chargeant le modèle spaCy.
-        S'assure que le modèle est téléchargé s'il n'existe pas.
+        :param internet_controller: L'instance du contrôleur Internet pour gérer les téléchargements.
+        :param model_name: Le nom du modèle spaCy à utiliser.
         """
         self.model_name = model_name
+        self.internet_controller = internet_controller
         self.nlp = self._load_model()
 
     def _load_model(self):
         """
         Charge le modèle spaCy. S'il n'est pas disponible,
-        tente de le télécharger. Retourne None en cas d'échec.
+        demande la permission de le télécharger via l'InternetController.
         """
         try:
             return spacy.load(self.model_name)
         except OSError:
-            try:
-                # Redirige la sortie du téléchargement pour ne pas polluer la console
-                print(f"Téléchargement du modèle spaCy '{self.model_name}'...")
-                spacy.cli.download(self.model_name)
-                print("Téléchargement terminé.")
-                return spacy.load(self.model_name)
-            except Exception:
-                # L'échec sera géré par la logique appelante.
+            prompt = f"Le modèle spaCy '{self.model_name}' est manquant. Puis-je le télécharger ?"
+            if self.internet_controller.request_permission(prompt):
+                self.internet_controller.view.display_message(f"Téléchargement du modèle spaCy '{self.model_name}'...")
+                try:
+                    spacy.cli.download(self.model_name)
+                    self.internet_controller.view.display_message("Téléchargement terminé.")
+                    return spacy.load(self.model_name)
+                except Exception as e:
+                    self.internet_controller.view.display_message(f"ERREUR: Impossible de télécharger le modèle. {e}")
+                    return None
+            else:
+                self.internet_controller.view.display_message("Téléchargement refusé. Le module NLP ne sera pas fonctionnel.")
                 return None
 
     def process_command(self, command_text: str) -> dict:
@@ -48,6 +54,7 @@ class NLPProcessor:
         INTENT_KEYWORDS = {
             "create": ["crée", "créer", "fabrique", "génère"],
             "execute": ["exécute", "exécuter", "lance", "lancer", "démarre"],
+            "install": ["installe", "installer", "télécharge"],
             "speak": ["parle", "parler", "dis", "dire", "présente-toi"],
             "learn_face": ["apprends", "apprendre", "mémorise", "mémoriser", "enregistre mon visage"],
             "verify_face": ["identifie", "identifier", "vérifie", "vérifier", "reconnais", "qui suis-je"]
@@ -63,6 +70,7 @@ class NLPProcessor:
             "intent": "unknown",
             "project_type": "unknown",
             "project_name": None,
+            "package_name": None, # Ajout pour l'installation
             "entities": {ent.label_: ent.text for ent in self.nlp(command_text).ents}
         }
 
@@ -94,5 +102,19 @@ class NLPProcessor:
         # Si le nom n'est pas trouvé, on peut essayer avec les entités génériques
         if not result["project_name"] and result["entities"]:
             result["project_name"] = next(iter(result["entities"].values()), None)
+
+        # 4. Extraire le nom du paquet si l'intention est d'installer
+        if result["intent"] == "install":
+            # Heuristique: le nom du paquet est souvent le nom qui suit le mot-clé d'installation.
+            for i, token in enumerate(doc):
+                if token.text in INTENT_KEYWORDS["install"] and i + 1 < len(doc):
+                    # On peut affiner en cherchant le prochain nom, etc.
+                    # Pour l'instant, on prend le token suivant.
+                    result["package_name"] = doc[i + 1].text
+                    break
+            # Si non trouvé, on peut tenter de chercher un nom de projet comme fallback
+            if not result["package_name"]:
+                result["package_name"] = result["project_name"]
+
 
         return result

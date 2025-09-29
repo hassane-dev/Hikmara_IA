@@ -9,6 +9,7 @@ from hikmara.modules.module_06_code_execution.code_executor import CodeExecutor
 from hikmara.modules.module_07_voice_recognition.voice_recognizer import VoiceRecognizer
 from hikmara.modules.module_08_voice_synthesis.voice_synthesizer import VoiceSynthesizer
 from hikmara.modules.module_09_facial_recognition.facial_recognizer import FacialRecognizer
+from hikmara.modules.module_10_internet_control.internet_controller import InternetController
 from hikmara.view.terminal_view import TerminalView
 
 class MainController:
@@ -25,10 +26,11 @@ class MainController:
         self.voice_mode_enabled = False
 
         self.view.display_message("Initialisation du contrôleur et des modules...")
+        self.internet_controller = InternetController(view=self.view) # Instanciation du Module 10
         self.knowledge_base = KnowledgeBase(db_path=db_full_path)
         self.structured_learner = StructuredLearner(knowledge_base=self.knowledge_base)
         self.raw_learner = RawLearner(structured_learner=self.structured_learner)
-        self.nlp_processor = NLPProcessor()
+        self.nlp_processor = NLPProcessor(internet_controller=self.internet_controller)
         self.code_generator = CodeGenerator()
         self.code_executor = CodeExecutor()
         self.voice_recognizer = VoiceRecognizer()
@@ -93,6 +95,8 @@ class MainController:
             self._handle_learn_face_intent()
         elif intent == "verify_face":
             self._handle_verify_face_intent()
+        elif intent == "install":
+            self._handle_install_intent(nlp_result)
         elif intent == "unknown":
             message = "-> Je n'ai pas compris l'action principale. Pouvez-vous reformuler ?"
             self.view.display_message(message, speak=self.voice_mode_enabled)
@@ -122,6 +126,23 @@ class MainController:
         success, message = self.facial_recognizer.verify_face()
 
         self.view.display_message(f"-> {message}", speak=self.voice_mode_enabled)
+
+    def _handle_install_intent(self, nlp_result: dict):
+        """ Gère l'intention d'installer un paquet. """
+        package_name = nlp_result.get("package_name")
+        if not package_name:
+            message = "-> Vous voulez installer un paquet, mais vous n'avez pas précisé lequel."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
+            return
+
+        prompt = f"Voulez-vous vraiment installer le paquet '{package_name}' ?"
+        if self.internet_controller.request_permission(prompt):
+            self.view.display_message(f"-> Lancement de l'installation de '{package_name}'...", speak=self.voice_mode_enabled)
+            success, message = self.internet_controller.install_package(package_name)
+            self.view.display_message(f"-> {message}", speak=self.voice_mode_enabled)
+        else:
+            message = "-> Installation annulée."
+            self.view.display_message(message, speak=self.voice_mode_enabled)
 
     def _handle_creation_intent(self, nlp_result: dict):
         """
