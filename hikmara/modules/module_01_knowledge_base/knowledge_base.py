@@ -13,7 +13,10 @@ class KnowledgeBase:
 
     def _init_db(self):
         try:
-            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+            # S'assurer que le dossier parent existe s'il est spécifié
+            db_dir = os.path.dirname(self.db_path)
+            if db_dir:  # Ne rien faire si le chemin est local (ex: "test.db")
+                os.makedirs(db_dir, exist_ok=True)
             self.conn = sqlite3.connect(self.db_path)
             cursor = self.conn.cursor()
             cursor.execute("""
