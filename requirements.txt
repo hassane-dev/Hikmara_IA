@@ -23,5 +23,5 @@ requests
 
 # --- Réseaux Neuronaux ---
 # Dépendances pour le module 11 et le futur.
-tensorflow
-torch
+# tensorflow
+# torch
