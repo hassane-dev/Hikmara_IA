@@ -19,8 +19,15 @@ class StructuredLearner:
         Analyse (tokenise) et apprend un nouveau concept, puis le stocke.
         Retourne True en cas de succès, False sinon.
         """
-        # La tokenisation est une étape interne, pas besoin de l'afficher.
-        nltk.word_tokenize(content)
+        try:
+            if not content or not content.strip():
+                return True # Ce n'est pas une erreur
 
-        new_id = self.kb.add_knowledge(concept_name, content, source)
-        return new_id is not None
+            # La tokenisation est une étape interne, pas besoin de l'afficher.
+            nltk.word_tokenize(content)
+
+            new_id = self.kb.add_knowledge(concept_name, content, source)
+            return new_id is not None
+        except Exception:
+            # En cas d'erreur (ex: données NLTK manquantes), on retourne False
+            return False
